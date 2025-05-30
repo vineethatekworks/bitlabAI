@@ -5,12 +5,12 @@ import java.util.List;
 public class InterviewRequest {
     private String applicantId;
     private List<String> skills;
-    private List<QuestionHistory> history;
+    private List<Object> history;
     private String currentAnswer;
 
     public InterviewRequest() {}
 
-    public InterviewRequest(String applicantId, List<String> skills, List<QuestionHistory> history, String currentAnswer) {
+    public InterviewRequest(String applicantId, List<String> skills, List<Object> history, String currentAnswer) {
         this.applicantId = applicantId;
         this.skills = skills;
         this.history = history;
@@ -33,11 +33,11 @@ public class InterviewRequest {
         this.skills = skills;
     }
 
-    public List<QuestionHistory> getHistory() {
+    public List<Object> getHistory() {
         return history;
     }
 
-    public void setHistory(List<QuestionHistory> history) {
+    public void setHistory(List<Object> history) {
         this.history = history;
     }
 

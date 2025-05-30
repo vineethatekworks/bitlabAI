@@ -7,141 +7,159 @@ import java.net.http.HttpResponse;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.talentstream.dto.InterviewRequest;
 import com.talentstream.dto.InterviewResponse;
-import com.talentstream.dto.QuestionHistory;
 
 @Service
 public class InterviewService {
 
-    private static final Logger logger = LoggerFactory.getLogger(InterviewService.class);
-    private static final String GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=";
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
-    private final Gson gson = new Gson();
-    private final HttpClient httpClient = HttpClient.newHttpClient();
-
-    @Value("${gemini.api.key}")
+	private static final String GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=";
+	@Value("${gemini.api.key}")
 	private String apiKey;
-    
-    public InterviewResponse generateNextQuestion(InterviewRequest request) {
-        // 1. Build prompt using applicant's data
-        String prompt = buildPrompt(request);
-        System.out.println("prompt :"+prompt);
 
-        // 2. Call Gemini AI to generate response
-        String aiResponse = call(prompt);
-        System.out.println("airesponse :"+aiResponse);
+	private final HttpClient httpClient = HttpClient.newHttpClient();
+	private final Gson gson = new GsonBuilder().create();
+	public InterviewResponse generateNextQuestion(InterviewRequest request) {
+	    // Step 1: Generate the prompt based on skills, history, and current answer
+	    String prompt = generatePrompt(request.getSkills(), request.getHistory(), request.getCurrentAnswer());
+	    System.out.println("prompt: " + prompt);
 
-        // 3. Parse and return InterviewResponse
-        return parseAIResponse(aiResponse, request.getHistory().size() + 1);
-    }
+	    // Step 2: Call Gemini and get the response
+	    List<String> airesponse = callGemini(prompt);
+	    System.out.println("gemini: " + airesponse);
 
-    private String buildPrompt(InterviewRequest request) {
-        StringBuilder historyBuilder = new StringBuilder();
-        if (request.getHistory() != null) {
-            for (QuestionHistory q : request.getHistory()) {
-                historyBuilder.append("- Q")
-                        .append(q.getQuestionNumber())
-                        .append(": ")
-                        .append(q.getQuestion())
-                        .append("\n");
-            }
-        }
+	    // Step 3: Parse Gemini's response JSON (you already have a method for this)
+	    JsonObject responseJson = parseAIResponse(airesponse);
 
-        StringBuilder promptBuilder = new StringBuilder();
-        promptBuilder.append("Generate a technical interview question for a candidate.\n");
-        promptBuilder.append("Skills: ").append(String.join(", ", request.getSkills())).append("\n");
-        promptBuilder.append("Previous Questions:\n").append(historyBuilder.toString());
-        promptBuilder.append("Candidate's Last Answer: ")
-                .append(request.getCurrentAnswer() == null ? "None" : request.getCurrentAnswer())
-                .append("\n\n");
-        promptBuilder.append("Respond in JSON format with fields: {\"question\": \"string\", \"feedback\": \"string\"}");
+	    // Step 4: Extract fields from JsonObject
+	    String questionNumber = responseJson.get("questionNumber").getAsString();
+	    String question = responseJson.get("question").getAsString();
+	    String analysis = responseJson.has("analysis") ? responseJson.get("analysis").getAsString() : "";
+	    boolean completionStatus = responseJson.get("completionStatus").getAsBoolean();
+	    String overallFeedback = responseJson.has("overallFeedback") ? responseJson.get("overallFeedback").getAsString() : "";
 
-        return promptBuilder.toString();
-    }
+	    // Step 5: Create and return InterviewResponse
+	    InterviewResponse response = new InterviewResponse();
+	    response.setQuestionNumber(questionNumber);
+	    response.setQuestion(question);
+	    response.setAnalysis(analysis);
+	    response.setCompletionStatus(completionStatus);
+	    response.setOverallFeedback(overallFeedback);
+
+	    return response;
+	}
+
+	private JsonObject parseAIResponse(List<String> response) {
+	    try {
+	        System.out.println("response: " + response);
+
+	        String combined = String.join(" ", response).trim();
+
+	        String cleaned = combined.replaceAll("```json", "")
+	                                 .replaceAll("```", "")
+	                                 .trim();
+
+	        int start = cleaned.indexOf("{");
+	        int end = cleaned.lastIndexOf("}");
+
+	        if (start == -1 || end == -1 || end <= start) {
+	            throw new RuntimeException("Invalid JSON content in response");
+	        }
+
+	        String jsonPart = cleaned.substring(start, end + 1).trim();
+	        System.out.println("jsonPart: " + jsonPart);
+
+	        return JsonParser.parseString(jsonPart).getAsJsonObject();
+
+	    } catch (Exception e) {
+	        System.out.println("Failed to parse response:"+e);
+	        throw new RuntimeException("Invalid response format from Gemini");
+	    }
+	}
 
 
-    private InterviewResponse parseAIResponse(String jsonResponse, int questionNumber) {
-        try {
-            JsonNode node = objectMapper.readTree(jsonResponse);
-            String question = node.get("question").asText();
-            String feedback = node.get("feedback").asText();
 
-            return new InterviewResponse(
-                    questionNumber,
-                    question,
-                    false,
-                    feedback
-            );
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to parse AI response: " + e.getMessage(), e);
-        }
-    }
+	private String generatePrompt(List<String> skills, List<Object> history, String currentAnswer) {
+		return "You are Vineetha , An AI inetreview but you have to think like a human and follow up the below rules:"
+	            + "First Question:\r\n"
+				+ "If history and current_answer are null, pick the first skill from the skills list:"+skills+" and ask a beginner-level question.\r\n"
+				+ "Follow-Up Based on History:"+history
+				+ "If history exists, reference it to:\r\n"
+				+ "Avoid repeated questions and repeated topic in a skill.\r\n"
+				+ "Avoid revisiting already tested skills (unless further probing is needed).\r\n"
+				+ "Evaluate Current Answer: "+currentAnswer
+				+ "If answer is irrelevant/\"I don’t know or null\"/low-confidence:\r\n"
+				+ "Move to the next skill in the list.\r\n"
+				+ "If answer is good/high-confidence:\r\n"
+				+ "Move to a different skill (unless deeper assessment is needed).\r\n"
+				+ "If answer is relevant but shallow/unclear:\r\n"
+				+ "Ask a follow-up question on the same skill (deeper or alternative angle).\r\n"
+				+ "Skill Progression:\r\n"
+				+ "Never loop back to a skill once confidently answered.\r\n"
+				+ "Ensure all skills are covered unless the candidate consistently struggles."
+				+ "strictly Return only 1 JSON object dont give extra information rather than JSON:\r\n"
+				+ "{\r\n"
+				+ "  \"questionNumber\": \"<Next question number>\",\r\n"
+				+ "  \"question\": \"<Next practical conceptual question>\",\r\n"
+				+ "  \"analysis\": \"<Evaluation of the latest answer>\",\r\n"
+				+ "  \"completionStatus\": <true | false>,\r\n"
+				+ "  \"overallFeedback\": \"<Summary if done, else empty>\"\r\n"
+				+ "}`";
+		}
 
-    private String call(String prompt) {
-        try {
-            Map<String, Object> content = Map.of(
-                    "contents", List.of(
-                            Map.of("parts", List.of(
-                                    Map.of("text", prompt)
-                            ))
-                    )
-            );
 
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(GEMINI_URL + apiKey))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(content)))
-                    .build();
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+	private List<String> callGemini(String prompt)   {
+		try {
+			Map<String, Object> content = Map.of("contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))));
 
-            if (response.statusCode() != 200) {
-                throw new RuntimeException("Gemini API returned status: " + response.statusCode());
-            }
+			HttpRequest request = HttpRequest.newBuilder().uri(URI.create(GEMINI_URL + apiKey))
+					.header("Content-Type", "application/json")
+					.POST(HttpRequest.BodyPublishers.ofString(gson.toJson(content))).build();
 
-            JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+			HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-            if (json.has("error")) {
-                throw new RuntimeException("Gemini API error: " + json.get("error").toString());
-            }
+			if (response.statusCode() != 200) {
+				throw new RuntimeException("Gemini API returned status: " + response.statusCode());
+			}
 
-            JsonArray candidates = json.getAsJsonArray("candidates");
-            if (candidates == null || candidates.isEmpty()) {
-                throw new RuntimeException("No candidates in Gemini response");
-            }
+			JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
 
-            JsonObject cont = candidates.get(0).getAsJsonObject().getAsJsonObject("content");
-            JsonArray parts = cont.getAsJsonArray("parts");
-            if (parts == null || parts.isEmpty()) {
-                throw new RuntimeException("No parts in Gemini response content");
-            }
+			if (json.has("error")) {
+				throw new RuntimeException("Gemini API error: " + json.get("error").toString());
+			}
 
-            String text = parts.get(0).getAsJsonObject().get("text").getAsString();
+			JsonArray candidates = json.getAsJsonArray("candidates");
+			if (candidates == null || candidates.isEmpty()) {
+				throw new RuntimeException("No candidates in Gemini response");
+			}
 
-            // Return raw JSON response (1st line expected to be JSON string)
-            return Arrays.stream(text.split("\n"))
-                    .map(String::trim)
-                    .filter(line -> !line.isBlank())
-                    .findFirst()
-                    .orElseThrow(() -> new RuntimeException("No usable content in Gemini response"));
+			JsonObject cont = candidates.get(0).getAsJsonObject().getAsJsonObject("content");
+			JsonArray parts = cont.getAsJsonArray("parts");
+			if (parts == null || parts.isEmpty()) {
+				throw new RuntimeException("No parts in Gemini response content");
+			}
 
-        } catch (Exception e) {
-            logger.error("Error calling Gemini API", e);
-            throw new RuntimeException("Error calling Gemini API: " + e.getMessage());
-        }
-    }
+			String text = parts.get(0).getAsJsonObject().get("text").getAsString();
+
+			return Arrays.stream(text.split("\n")).map(String::trim).filter(line -> !line.isBlank())
+					.collect(Collectors.toList());
+
+		} catch (Exception e) {
+			System.out.println("Error calling Gemini API"+ e);
+			throw new RuntimeException("Error calling Gemini API: " + e.getMessage());
+		}
+	}
+
+	
 }

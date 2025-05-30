@@ -1,25 +1,31 @@
 package com.talentstream.dto;
 
 public class InterviewResponse {
-    private int questionNumber;
+    private String questionNumber;
     private String question;
-    private boolean completed;
-    private String feedback;
+    private String analysis;
+    private boolean completionStatus;
+    private String overallFeedback;
 
-    public InterviewResponse() {}
-
-    public InterviewResponse(int questionNumber, String question, boolean completed, String feedback) {
-        this.questionNumber = questionNumber;
-        this.question = question;
-        this.completed = completed;
-        this.feedback = feedback;
+    // Constructors
+    public InterviewResponse() {
     }
 
-    public int getQuestionNumber() {
+    public InterviewResponse(String questionNumber, String question, String analysis, 
+                           boolean completionStatus, String overallFeedback) {
+        this.questionNumber = questionNumber;
+        this.question = question;
+        this.analysis = analysis;
+        this.completionStatus = completionStatus;
+        this.overallFeedback = overallFeedback;
+    }
+
+    // Getters and Setters
+    public String getQuestionNumber() {
         return questionNumber;
     }
 
-    public void setQuestionNumber(int questionNumber) {
+    public void setQuestionNumber(String questionNumber) {
         this.questionNumber = questionNumber;
     }
 
@@ -31,29 +37,39 @@ public class InterviewResponse {
         this.question = question;
     }
 
-    public boolean isCompleted() {
-        return completed;
+    public String getAnalysis() {
+        return analysis;
     }
 
-    public void setCompleted(boolean completed) {
-        this.completed = completed;
+    public void setAnalysis(String analysis) {
+        this.analysis = analysis;
     }
 
-    public String getFeedback() {
-        return feedback;
+    public boolean isCompletionStatus() {
+        return completionStatus;
     }
 
-    public void setFeedback(String feedback) {
-        this.feedback = feedback;
+    public void setCompletionStatus(boolean completionStatus) {
+        this.completionStatus = completionStatus;
     }
 
+    public String getOverallFeedback() {
+        return overallFeedback;
+    }
+
+    public void setOverallFeedback(String overallFeedback) {
+        this.overallFeedback = overallFeedback;
+    }
+
+    // toString() method for debugging/logging
     @Override
     public String toString() {
         return "InterviewResponse{" +
-                "questionNumber=" + questionNumber +
+                "questionNumber='" + questionNumber + '\'' +
                 ", question='" + question + '\'' +
-                ", completed=" + completed +
-                ", feedback='" + feedback + '\'' +
+                ", analysis='" + analysis + '\'' +
+                ", completionStatus=" + completionStatus +
+                ", overallFeedback='" + overallFeedback + '\'' +
                 '}';
     }
 }
