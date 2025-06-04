@@ -1,18 +1,20 @@
 package com.talentstream.dto;
 
 public class InterviewResponse {
-    private String questionNumber;
+    private int questionNumber;
     private String question;
     private String analysis;
     private boolean completionStatus;
     private String overallFeedback;
-    private String CurrentSkillQuestionNumber;
-
+    private String skill;
+    private int CurrentSkillQuestionNumber;
+    private String CurrentDifficulty;
+    private int CurrentSkillIndex;
     // Constructors
     public InterviewResponse() {
     }
 
-    public InterviewResponse(String questionNumber, String question, String analysis, 
+    public InterviewResponse(int questionNumber, String question, String analysis, 
                            boolean completionStatus, String overallFeedback) {
         this.questionNumber = questionNumber;
         this.question = question;
@@ -22,11 +24,11 @@ public class InterviewResponse {
     }
 
     // Getters and Setters
-    public String getQuestionNumber() {
+    public int getQuestionNumber() {
         return questionNumber;
     }
 
-    public void setQuestionNumber(String questionNumber) {
+    public void setQuestionNumber(int questionNumber) {
         this.questionNumber = questionNumber;
     }
 
@@ -62,6 +64,39 @@ public class InterviewResponse {
         this.overallFeedback = overallFeedback;
     }
 
+	public String getSkill() {
+		return skill;
+	}
+
+	public void setSkill(String skill) {
+		this.skill = skill;
+	}
+
+	public int getCurrentSkillQuestionNumber() {
+		return CurrentSkillQuestionNumber;
+	}
+
+	public void setCurrentSkillQuestionNumber(int currentSkillQuestionNumber) {
+		CurrentSkillQuestionNumber = currentSkillQuestionNumber;
+	}
+
+	public String getCurrentDifficulty() {
+		return CurrentDifficulty;
+	}
+
+	public void setCurrentDifficulty(String currentDifficulty) {
+		CurrentDifficulty = currentDifficulty;
+	}
+
+	public int getCurrentSkillIndex() {
+		return CurrentSkillIndex;
+	}
+
+	public void setCurrentSkillIndex(int currentSkillIndex) {
+		CurrentSkillIndex = currentSkillIndex;
+	}
+
+
     // toString() method for debugging/logging
     @Override
     public String toString() {
@@ -73,4 +108,5 @@ public class InterviewResponse {
                 ", overallFeedback='" + overallFeedback + '\'' +
                 '}';
     }
+
 }

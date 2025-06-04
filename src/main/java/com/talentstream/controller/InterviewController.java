@@ -11,14 +11,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.talentstream.dto.InterviewRequest;
 import com.talentstream.dto.InterviewResponse;
-import com.talentstream.service.InterviewService;
+import com.talentstream.service.InterviewService2;
 
 @RestController
 @RequestMapping("/api/interview")
 public class InterviewController {
 
     @Autowired
-    private InterviewService interviewService;
+    private InterviewService2 interviewService;
 
     /**
      * Generates the next interview question in the thread based on applicantId,
