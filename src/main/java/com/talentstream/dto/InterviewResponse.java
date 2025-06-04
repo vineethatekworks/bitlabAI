@@ -6,6 +6,7 @@ public class InterviewResponse {
     private String analysis;
     private boolean completionStatus;
     private String overallFeedback;
+    private String CurrentSkillQuestionNumber;
 
     // Constructors
     public InterviewResponse() {
