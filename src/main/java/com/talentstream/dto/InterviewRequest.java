@@ -1,16 +1,17 @@
 package com.talentstream.dto;
 
 import java.util.List;
+import java.util.Map;
 
 public class InterviewRequest {
     private String applicantId;
     private List<String> skills;
-    private List<Object> history;
+    private List<Map<String, Object>> history;
     private String currentAnswer;
 
     public InterviewRequest() {}
 
-    public InterviewRequest(String applicantId, List<String> skills, List<Object> history, String currentAnswer) {
+    public InterviewRequest(String applicantId, List<String> skills, List<Map<String, Object>> history, String currentAnswer) {
         this.applicantId = applicantId;
         this.skills = skills;
         this.history = history;
@@ -33,11 +34,11 @@ public class InterviewRequest {
         this.skills = skills;
     }
 
-    public List<Object> getHistory() {
+    public List<Map<String, Object>> getHistory() {
         return history;
     }
 
-    public void setHistory(List<Object> history) {
+    public void setHistory(List<Map<String, Object>> history) {
         this.history = history;
     }
 

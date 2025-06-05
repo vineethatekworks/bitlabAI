@@ -14,7 +14,22 @@ public class InterviewResponse {
     public InterviewResponse() {
     }
 
-    public InterviewResponse(int questionNumber, String question, String analysis, 
+    public InterviewResponse(int questionNumber, String question, String analysis, boolean completionStatus,
+			String overallFeedback, String skill, int currentSkillQuestionNumber, String currentDifficulty,
+			int currentSkillIndex) {
+		super();
+		this.questionNumber = questionNumber;
+		this.question = question;
+		this.analysis = analysis;
+		this.completionStatus = completionStatus;
+		this.overallFeedback = overallFeedback;
+		this.skill = skill;
+		CurrentSkillQuestionNumber = currentSkillQuestionNumber;
+		CurrentDifficulty = currentDifficulty;
+		CurrentSkillIndex = currentSkillIndex;
+	}
+
+	public InterviewResponse(int questionNumber, String question, String analysis, 
                            boolean completionStatus, String overallFeedback) {
         this.questionNumber = questionNumber;
         this.question = question;
@@ -96,17 +111,14 @@ public class InterviewResponse {
 		CurrentSkillIndex = currentSkillIndex;
 	}
 
+	@Override
+	public String toString() {
+		return "InterviewResponse [questionNumber=" + questionNumber + ", question=" + question + ", analysis="
+				+ analysis + ", completionStatus=" + completionStatus + ", overallFeedback=" + overallFeedback
+				+ ", skill=" + skill + ", CurrentSkillQuestionNumber=" + CurrentSkillQuestionNumber
+				+ ", CurrentDifficulty=" + CurrentDifficulty + ", CurrentSkillIndex=" + CurrentSkillIndex + "]";
+	}
 
-    // toString() method for debugging/logging
-    @Override
-    public String toString() {
-        return "InterviewResponse{" +
-                "questionNumber='" + questionNumber + '\'' +
-                ", question='" + question + '\'' +
-                ", analysis='" + analysis + '\'' +
-                ", completionStatus=" + completionStatus +
-                ", overallFeedback='" + overallFeedback + '\'' +
-                '}';
-    }
+
 
 }

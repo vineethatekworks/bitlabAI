@@ -6037,3 +6037,22 @@ Caused by: java.lang.Error: Unresolved compilation problems:
 04-06-2025_18:50:56.471{UTC}|report-tool|INFO ||o.a.c.c.C.[.[.[/]|Initializing Spring DispatcherServlet 'dispatcherServlet'
 04-06-2025_18:50:56.472{UTC}|report-tool|INFO ||o.s.w.s.DispatcherServlet|Initializing Servlet 'dispatcherServlet'
 04-06-2025_18:50:56.474{UTC}|report-tool|INFO ||o.s.w.s.DispatcherServlet|Completed initialization in 2 ms
+04-06-2025_19:15:46.464{UTC}|report-tool|INFO ||o.s.b.a.SpringApplicationAdminMXBeanRegistrar$SpringApplicationAdmin|Application shutdown requested.
+04-06-2025_19:15:46.480{UTC}|report-tool|INFO ||o.a.c.h.Http11NioProtocol|Pausing ProtocolHandler ["http-nio-8081"]
+04-06-2025_19:15:46.482{UTC}|report-tool|INFO ||o.a.c.c.StandardService|Stopping service [Tomcat]
+04-06-2025_19:15:46.484{UTC}|report-tool|INFO ||o.a.c.c.C.[.[.[/]|Destroying Spring FrameworkServlet 'dispatcherServlet'
+04-06-2025_19:15:46.500{UTC}|report-tool|WARN ||o.a.c.l.WebappClassLoaderBase|The web application [ROOT] appears to have started a thread named [HikariPool-3 housekeeper] but has failed to stop it. This is very likely to create a memory leak. Stack trace of thread:
+ java.base/jdk.internal.misc.Unsafe.park(Native Method)
+ java.base/java.util.concurrent.locks.LockSupport.parkNanos(LockSupport.java:269)
+ java.base/java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.awaitNanos(AbstractQueuedSynchronizer.java:1763)
+ java.base/java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(ScheduledThreadPoolExecutor.java:1182)
+ java.base/java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(ScheduledThreadPoolExecutor.java:899)
+ java.base/java.util.concurrent.ThreadPoolExecutor.getTask(ThreadPoolExecutor.java:1070)
+ java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1130)
+ java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+ java.base/java.lang.Thread.run(Thread.java:1583)
+04-06-2025_19:15:46.506{UTC}|report-tool|INFO ||o.a.c.h.Http11NioProtocol|Stopping ProtocolHandler ["http-nio-8081"]
+04-06-2025_19:15:46.520{UTC}|report-tool|INFO ||o.a.c.h.Http11NioProtocol|Destroying ProtocolHandler ["http-nio-8081"]
+04-06-2025_19:15:46.614{UTC}|report-tool|INFO ||o.s.o.j.LocalContainerEntityManagerFactoryBean|Closing JPA EntityManagerFactory for persistence unit 'default'
+04-06-2025_19:15:46.616{UTC}|report-tool|INFO ||c.z.h.HikariDataSource|HikariPool-3 - Shutdown initiated...
+04-06-2025_19:15:46.648{UTC}|report-tool|INFO ||c.z.h.HikariDataSource|HikariPool-3 - Shutdown completed.
