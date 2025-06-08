@@ -7,15 +7,13 @@ public class InterviewRequest {
     private String applicantId;
     private List<String> skills;
     private List<Map<String, Object>> history;
-    private String currentAnswer;
 
     public InterviewRequest() {}
 
-    public InterviewRequest(String applicantId, List<String> skills, List<Map<String, Object>> history, String currentAnswer) {
+    public InterviewRequest(String applicantId, List<String> skills, List<Map<String, Object>> history) {
         this.applicantId = applicantId;
         this.skills = skills;
         this.history = history;
-        this.currentAnswer = currentAnswer;
     }
 
     public String getApplicantId() {
@@ -42,13 +40,7 @@ public class InterviewRequest {
         this.history = history;
     }
 
-    public String getCurrentAnswer() {
-        return currentAnswer;
-    }
-
-    public void setCurrentAnswer(String currentAnswer) {
-        this.currentAnswer = currentAnswer;
-    }
+   
 
     @Override
     public String toString() {
@@ -56,7 +48,6 @@ public class InterviewRequest {
                 "applicantId='" + applicantId + '\'' +
                 ", skills=" + skills +
                 ", history=" + history +
-                ", currentAnswer='" + currentAnswer + '\'' +
                 '}';
     }
 }

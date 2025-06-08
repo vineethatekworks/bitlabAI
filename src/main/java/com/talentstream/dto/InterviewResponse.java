@@ -15,8 +15,8 @@ public class InterviewResponse {
     }
 
     public InterviewResponse(int questionNumber, String question, String analysis, boolean completionStatus,
-			String overallFeedback, String skill, int currentSkillQuestionNumber, String currentDifficulty,
-			int currentSkillIndex) {
+			String overallFeedback, String skill, int currentSkillQuestionNumber, int currentSkillIndex,
+			String currentDifficulty) {
 		super();
 		this.questionNumber = questionNumber;
 		this.question = question;
@@ -29,16 +29,8 @@ public class InterviewResponse {
 		CurrentSkillIndex = currentSkillIndex;
 	}
 
-	public InterviewResponse(int questionNumber, String question, String analysis, 
-                           boolean completionStatus, String overallFeedback) {
-        this.questionNumber = questionNumber;
-        this.question = question;
-        this.analysis = analysis;
-        this.completionStatus = completionStatus;
-        this.overallFeedback = overallFeedback;
-    }
 
-    // Getters and Setters
+	// Getters and Setters
     public int getQuestionNumber() {
         return questionNumber;
     }

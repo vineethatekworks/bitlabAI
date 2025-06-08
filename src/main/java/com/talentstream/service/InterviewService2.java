@@ -4,14 +4,21 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import com.google.gson.*;
-
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.talentstream.dto.InterviewRequest;
 import com.talentstream.dto.InterviewResponse;
 
@@ -21,6 +28,8 @@ public class InterviewService2 {
 	private static final String GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=";
 	private static final Set<String> VALID_DIFFICULTIES = Set.of("easy", "medium", "hard");
 	private static final String DEFAULT_DIFFICULTY = "easy";
+	private static final int MAX_QUESTIONS_PER_SKILL = 4;
+	private static final String DEFAULT_FEEDBACK = "No feedback provided";
 
 	@Value("${gemini.api.key}")
 	private String apiKey;
@@ -29,36 +38,43 @@ public class InterviewService2 {
 	private final Gson gson = new GsonBuilder().create();
 
 	public InterviewResponse generateNextQuestion(InterviewRequest request) {
+
 		List<Map<String, Object>> history = request.getHistory();
 		List<String> skills = request.getSkills();
 		int currentSkillQuestionNumber = 1;
 
 		if (skills == null || skills.isEmpty()) {
-			throw new RuntimeException("At least one skill is required");
+			throw new IllegalArgumentException("At least one skill is required");
 		}
 
-		if (history.isEmpty() || history == null) {
-			return firstQuestion(skills.get(0), 0, history); // 0 = first question number
+		if (history == null || history.isEmpty()) {
+			return firstQuestion(skills.get(0), 0, history);
 		}
 
-		Map<String, Object> lastEntry = (Map<String, Object>) history.get(history.size() - 2);
-		if (lastEntry.size() < 2) {
-			throw new RuntimeException("Please provide answer for last question");
-		}
+		Map<String, Object> lastEntry = getHistoryEntry(history, -2);
+		validateLastEntry(lastEntry);
+
 		int globalQuestionNumber = ((Number) lastEntry.get("questionNumber")).intValue() + 1;
-		currentSkillQuestionNumber = ((Number) lastEntry.get("currentSkillQuestionNumber")).intValue() + 1;
+		String question = (String) lastEntry.get("question");
 		String difficulty = (String) lastEntry.get("currentDifficulty");
 		int currentSkillIndex = ((Number) lastEntry.get("currentSkillIndex")).intValue();
 		String currentSkill = skills.get(currentSkillIndex);
+		currentSkillQuestionNumber = ((Number) lastEntry.get("currentSkillQuestionNumber")).intValue() + 1;
 
-		String evalPrompt = generatePromptForEvaluation(currentSkill, difficulty, history, currentSkillQuestionNumber);
+		String evalPrompt = generatePromptForEvaluation(currentSkill, difficulty, history, question, currentSkillQuestionNumber);
 		System.out.println("promt:" + evalPrompt);
+
 		List<String> responseLines = callGemini(evalPrompt);
 		System.out.println("promt:" + responseLines);
+
 		JsonObject responseJson = parseAIResponse(responseLines);
 		String action = responseJson.get("action").getAsString().toLowerCase();
-		String feedback = responseJson.has("feedback") ? responseJson.get("feedback").getAsString()
-				: "No feedback provided";
+		String feedback = responseJson.has("feedback") ? responseJson.get("feedback").getAsString() : DEFAULT_FEEDBACK;
+
+		if (currentSkillQuestionNumber == MAX_QUESTIONS_PER_SKILL) {
+			return handleNextSkill(history, skills, currentSkillIndex, globalQuestionNumber, feedback,
+					currentSkillQuestionNumber);
+		}
 
 		switch (action) {
 		case "next_skill":
@@ -116,15 +132,16 @@ public class InterviewService2 {
 				analyses.add(analysisObj.toString());
 			}
 		}
-        System.out.println(analyses);
+		System.out.println(analyses);
 		String OverallfeedbackPromt = generateOverAllFeedback(analyses);
-		System.out.println("OverallfeedbackPromt"+OverallfeedbackPromt);
+		System.out.println("OverallfeedbackPromt" + OverallfeedbackPromt);
 
 		JsonObject responseJson = parseAIResponse(callGemini(OverallfeedbackPromt));
 		String Overallfeedback = responseJson.get("OverallFeedback").getAsString();
-		System.out.println("overallfeedback :"+Overallfeedback);
+		System.out.println("overallfeedback :" + Overallfeedback);
+		InterviewResponse response = new InterviewResponse(0, null, null, true, Overallfeedback, null, 0, 0, null);
+		return response;
 
-		return buildInterviewResponse("interview completed", null, 0, 0, null, 0, Overallfeedback, false);
 	}
 
 	private InterviewResponse buildInterviewResponse(String question, String skill, int questionNumber,
@@ -138,34 +155,35 @@ public class InterviewService2 {
 		response.setCurrentSkillIndex(skillIndex);
 		response.setAnalysis(feedback);
 		response.setCompletionStatus(isComplete);
-		System.out.println("response:"+response);
+		System.out.println("response:" + response);
 		return response;
 	}
 
 	private String generatePromptForEvaluation(String skill, String difficulty, List<Map<String, Object>> history,
-			int currentSkillQuestionNumber) {
+			String question, int currentSkillQuestionNumber) {
 		difficulty = validateDifficulty(difficulty);
 		Map<String, Object> lastEntry = (Map<String, Object>) history.get(history.size() - 1);
 		String currentAnswer = (String) lastEntry.get("currentAnswer");
 
 		return "You're an expert technical interviewer evaluating a fresher's answer to a " + difficulty
-				+ " level question on the topic of " + skill + ". This is question number " + currentSkillQuestionNumber
-				+ " for this skill.\n\n" + "Candidate's most recent answer: \"" + currentAnswer
-				+ "\" (in response to the last question in the history: " + history + ")\n\n"
+				+ " level question on the topic of " + skill + " for this skill.\n\n"
+				+ "Candidate's most recent answer: \"" + currentAnswer
+				+ " For the question :" + question + ")\n\n"
 				+ "Evaluate this response with empathy and technical insight give feedback.\n" + "Evaluation Rules:\n"
+				+ "DO NOT make comments like 'Let's move on' or 'Try another topic'. Focus only on this answer.\n\n"
+				+ "Evaluation Rules:\n"
 				+ "Based on the answer's quality, clarity, and relevance, determine the appropriate next action:\n\n"
-				+ "- if the question number is equal to 4 : Strictly move to the next skill(action: next_skill)\n"
-				+ "- If the answer is good and confident: move to the next skill (action: next_skill)\n"
 				+ "- If the answer is reasonably good: continue at the same level (action: next_question)\n"
 				+ "- If the answer lacks clarity or has mistakes: simplify and ask an easier question (action: simpler_question)\n"
-				+ "- If the answer is very poor, off-topic, or the candidate says \"I don't know\":\n"
+				+ "- If the answer is irrelevant , very poor, off-topic, or the candidate says \"I don't know\":\n"
 				+ "  - If difficulty is 'hard' or 'medium': ask a simpler question (action: simpler_question)\n"
 				+ "  - If difficulty is 'easy': move to the next skill (action: next_skill)\n\n"
 				+ "Provide constructive feedback in **exactly two lines** (strictly).\n"
 				+ "Do NOT include the action in the feedback.\n\n"
-				+ "Respond with ONLY raw JSON in this exact format:\n"
-				+ "{\"action\": \"next_question|simpler_question|next_skill|end\", "
-				+ "\"feedback\": \"your feedback on currentAnswer strictly dont mention next action \"}";
+				+ "Respond with ONLY raw JSON in this exact format:\n" + "{\n"
+				+ "  \"action\": \"next_question|simpler_question|next_skill|end\",\n"
+				+ "  \"feedback\": \"Give only two-line feedback strictly about the candidate's answer. DO NOT mention what action will be taken. Stricly include score out of 10 and suggest what the candidate can improve or learn.\"\n"
+				+ "}\n";
 	}
 
 	private String generateQuestion(String difficulty, String skill, List<Map<String, Object>> history) {
@@ -181,18 +199,18 @@ public class InterviewService2 {
 	}
 
 	private String generateOverAllFeedback(List<String> analyses) {
-		System.out.println("analyses :"+analyses);
+		System.out.println("analyses :" + analyses);
 		return "You're an expert technical interviewer. Based on these individual feedback points i.e:" + analyses
-				+ "	    	    \"\\n\\nRead all feedbacks Generate a concise overall feedback (3-4 sentences) summarizing the candidate's performance \" +\r\n"
-				+ "	    	    \"across all technical skills assessed. Highlight strengths and areas for improvement. \" +\r\n"
-				+ "	    	    \"Provide only the feedback text without any additional formatting or headings. \" +\r\n"
-				+ "	    	    \"For example: 'Candidate shows strong Java skills but needs improvement in JavaScript. Overall, a solid foundation.'\";"
-				+ "              \"Respond with ONLY raw JSON in this exact format:\r\n"
-				+ "               \"OverallFeedback:\"<your generated Overallfeedback\"";
+				+ "	\n\\nRead all feedbacks Generate a concise overall feedback (3-4 sentences) summarizing the candidate's performance remember he is a fresher \" +\r\n"
+				+ "	\"across all technical skills assessed. Highlight strengths and areas for improvement. \" +\r\n"
+				+ "	\"Provide only the feedback text and  Stricly include overall score out of 10 without any additional formatting or headings. \" +\r\n"
+				+ "	\"For example: 'Candidate shows strong Java skills but needs improvement in JavaScript. Overall, a solid foundation.'\";"
+				+ "Strictly return a JSON object in this format:\n" + "{\n"
+				+ " \"OverallFeedback\":\"<your generated Overallfeedback\"";
 	}
 
 	private JsonObject parseAIResponse(List<String> response) {
-		System.out.println("response :"+response);
+		System.out.println("response :" + response);
 		String combined = String.join(" ", response).trim();
 		String cleaned = combined.replaceAll("```json", "").replaceAll("```", "").trim();
 		int start = cleaned.indexOf("{");
@@ -201,7 +219,7 @@ public class InterviewService2 {
 			throw new RuntimeException("Invalid JSON content in response");
 		}
 		String jsonPart = cleaned.substring(start, end + 1).trim();
-		System.out.println("jsonpart:"+jsonPart);
+		System.out.println("jsonpart:" + jsonPart);
 		return JsonParser.parseString(jsonPart).getAsJsonObject();
 	}
 
@@ -235,7 +253,7 @@ public class InterviewService2 {
 			}
 
 			String text = parts.get(0).getAsJsonObject().get("text").getAsString();
-			System.out.println("text :"+text);
+			System.out.println("text :" + text);
 
 			return Arrays.stream(text.split("\n")).map(String::trim).filter(line -> !line.isBlank())
 					.collect(Collectors.toList());
@@ -272,4 +290,19 @@ public class InterviewService2 {
 	private String validateDifficulty(String difficulty) {
 		return VALID_DIFFICULTIES.contains(difficulty.toLowerCase()) ? difficulty.toLowerCase() : DEFAULT_DIFFICULTY;
 	}
+
+	private Map<String, Object> getHistoryEntry(List<Map<String, Object>> history, int fromLast) {
+		int index = history.size() + fromLast;
+		if (index < 0 || index >= history.size()) {
+			throw new IndexOutOfBoundsException("Invalid history index");
+		}
+		return history.get(index);
+	}
+
+	private void validateLastEntry(Map<String, Object> entry) {
+		if (entry == null || entry.size() < 2) {
+			throw new IllegalStateException("Missing or incomplete last question entry");
+		}
+	}
+
 }
