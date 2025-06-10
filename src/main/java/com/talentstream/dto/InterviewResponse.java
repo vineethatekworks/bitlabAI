@@ -1,22 +1,24 @@
 package com.talentstream.dto;
 
 public class InterviewResponse {
-    private int questionNumber;
-    private String question;
-    private String analysis;
-    private boolean completionStatus;
-    private String overallFeedback;
-    private String skill;
-    private int CurrentSkillQuestionNumber;
-    private String CurrentDifficulty;
-    private int CurrentSkillIndex;
-    // Constructors
-    public InterviewResponse() {
-    }
+	private int questionNumber;
+	private String question;
+	private String analysis;
+	private boolean completionStatus;
+	private String overallFeedback;
+	private String skill;
+	private int CurrentSkillQuestionNumber;
+	private String CurrentDifficulty;
+	private int CurrentSkillIndex;
+	private int score;
 
-    public InterviewResponse(int questionNumber, String question, String analysis, boolean completionStatus,
+	// Constructors
+	public InterviewResponse() {
+	}
+
+	public InterviewResponse(int questionNumber, String question, String analysis, boolean completionStatus,
 			String overallFeedback, String skill, int currentSkillQuestionNumber, int currentSkillIndex,
-			String currentDifficulty) {
+			String currentDifficulty, int score) {
 		super();
 		this.questionNumber = questionNumber;
 		this.question = question;
@@ -27,49 +29,49 @@ public class InterviewResponse {
 		CurrentSkillQuestionNumber = currentSkillQuestionNumber;
 		CurrentDifficulty = currentDifficulty;
 		CurrentSkillIndex = currentSkillIndex;
+		this.score = score;
 	}
 
-
 	// Getters and Setters
-    public int getQuestionNumber() {
-        return questionNumber;
-    }
+	public int getQuestionNumber() {
+		return questionNumber;
+	}
 
-    public void setQuestionNumber(int questionNumber) {
-        this.questionNumber = questionNumber;
-    }
+	public void setQuestionNumber(int questionNumber) {
+		this.questionNumber = questionNumber;
+	}
 
-    public String getQuestion() {
-        return question;
-    }
+	public String getQuestion() {
+		return question;
+	}
 
-    public void setQuestion(String question) {
-        this.question = question;
-    }
+	public void setQuestion(String question) {
+		this.question = question;
+	}
 
-    public String getAnalysis() {
-        return analysis;
-    }
+	public String getAnalysis() {
+		return analysis;
+	}
 
-    public void setAnalysis(String analysis) {
-        this.analysis = analysis;
-    }
+	public void setAnalysis(String analysis) {
+		this.analysis = analysis;
+	}
 
-    public boolean isCompletionStatus() {
-        return completionStatus;
-    }
+	public boolean isCompletionStatus() {
+		return completionStatus;
+	}
 
-    public void setCompletionStatus(boolean completionStatus) {
-        this.completionStatus = completionStatus;
-    }
+	public void setCompletionStatus(boolean completionStatus) {
+		this.completionStatus = completionStatus;
+	}
 
-    public String getOverallFeedback() {
-        return overallFeedback;
-    }
+	public String getOverallFeedback() {
+		return overallFeedback;
+	}
 
-    public void setOverallFeedback(String overallFeedback) {
-        this.overallFeedback = overallFeedback;
-    }
+	public void setOverallFeedback(String overallFeedback) {
+		this.overallFeedback = overallFeedback;
+	}
 
 	public String getSkill() {
 		return skill;
@@ -103,14 +105,21 @@ public class InterviewResponse {
 		CurrentSkillIndex = currentSkillIndex;
 	}
 
+	public int getScore() {
+		return score;
+	}
+
+	public void setScore(int score) {
+		this.score = score;
+	}
+
 	@Override
 	public String toString() {
 		return "InterviewResponse [questionNumber=" + questionNumber + ", question=" + question + ", analysis="
 				+ analysis + ", completionStatus=" + completionStatus + ", overallFeedback=" + overallFeedback
 				+ ", skill=" + skill + ", CurrentSkillQuestionNumber=" + CurrentSkillQuestionNumber
-				+ ", CurrentDifficulty=" + CurrentDifficulty + ", CurrentSkillIndex=" + CurrentSkillIndex + "]";
+				+ ", CurrentDifficulty=" + CurrentDifficulty + ", CurrentSkillIndex=" + CurrentSkillIndex + ", score="
+				+ score + "]";
 	}
-
-
 
 }
