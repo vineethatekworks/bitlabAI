@@ -61,11 +61,12 @@ public class InterviewService {
 		String currentSkill = skills.get(currentSkillIndex);
 		currentSkillQuestionNumber = ((Number) lastEntry.get("currentSkillQuestionNumber")).intValue() + 1;
 
-		String evalPrompt = generatePromptForEvaluation(currentSkill, difficulty, history, question, currentSkillQuestionNumber);
-		System.out.println("promt:" + evalPrompt);
+		String evalPrompt = generatePromptForEvaluation(currentSkill, difficulty, history, question,
+				currentSkillQuestionNumber);
+		System.out.println("evalPrompt:" + evalPrompt);
 
 		List<String> responseLines = callGemini(evalPrompt);
-		System.out.println("promt:" + responseLines);
+		System.out.println("responseLines:" + responseLines);
 
 		JsonObject responseJson = parseAIResponse(responseLines);
 		String action = responseJson.get("action").getAsString().toLowerCase();
@@ -74,7 +75,7 @@ public class InterviewService {
 
 		if (currentSkillQuestionNumber == MAX_QUESTIONS_PER_SKILL) {
 			return handleNextSkill(history, skills, currentSkillIndex, globalQuestionNumber, feedback,
-					currentSkillQuestionNumber,score);
+					currentSkillQuestionNumber, score);
 		}
 
 		switch (action) {
@@ -88,7 +89,7 @@ public class InterviewService {
 			return buildQuestionResponse(history, currentSkill, globalQuestionNumber, currentSkillQuestionNumber,
 					upgradeDifficulty(difficulty), feedback, currentSkillIndex, score);
 		case "end":
-			return completeInterview(history, globalQuestionNumber, feedback);
+			return completeInterview(history, globalQuestionNumber, feedback,score);
 		default:
 			return buildQuestionResponse(history, currentSkill, globalQuestionNumber, currentSkillQuestionNumber,
 					difficulty, feedback, currentSkillIndex, score);
@@ -100,54 +101,70 @@ public class InterviewService {
 		String prompt = generateQuestion("easy", skill, history);
 		JsonObject responseJson = parseAIResponse(callGemini(prompt));
 		return buildInterviewResponse(responseJson.get("question").getAsString(), skill, 1, 1, "easy", skillIndex, null,
-				false,0);
+				false, 0);
 	}
 
 	private InterviewResponse handleNextSkill(List<Map<String, Object>> history, List<String> skills,
-			int currentSkillIndex, int globalQuestionNumber, String feedback, int currentSkillQuestionNumber, int score) {
+			int currentSkillIndex, int globalQuestionNumber, String feedback, int currentSkillQuestionNumber,
+			int score) {
 		int nextSkillIndex = currentSkillIndex + 1;
 		currentSkillQuestionNumber = 1;
 		if (nextSkillIndex >= skills.size()) {
-			return completeInterview(history, globalQuestionNumber, feedback);
+			return completeInterview(history, globalQuestionNumber, feedback,score);
 		}
 		String nextSkill = skills.get(nextSkillIndex);
 		return buildQuestionResponse(history, nextSkill, globalQuestionNumber, currentSkillQuestionNumber, "easy",
-				feedback, nextSkillIndex,score);
+				feedback, nextSkillIndex, score);
 	}
 
 	private InterviewResponse buildQuestionResponse(List<Map<String, Object>> history, String skill,
-			int globalQuestionNumber, int skillQuestionNumber, String difficulty, String feedback, int skillIndex, int score) {
+			int globalQuestionNumber, int skillQuestionNumber, String difficulty, String feedback, int skillIndex,
+			int score) {
 		String prompt = generateQuestion(difficulty, skill, history);
 		JsonObject responseJson = parseAIResponse(callGemini(prompt));
 		return buildInterviewResponse(responseJson.get("question").getAsString(), skill, globalQuestionNumber,
-				skillQuestionNumber, difficulty, skillIndex, feedback, false,score);
+				skillQuestionNumber, difficulty, skillIndex, feedback, false, score);
 	}
 
-	private InterviewResponse completeInterview(List<Map<String, Object>> history, int questionNumber,
-			String feedback) {
-		List<String> analyses = new ArrayList<>();
-		analyses.add(feedback);
+	private InterviewResponse completeInterview(List<Map<String, Object>> history, int questionNumber, String feedback, int lastScore) {
+	    List<String> analyses = new ArrayList<>();
+	    analyses.add(feedback);
+	    
+	    double totalScore = lastScore; 
+	    int scoreCount = 1;         
 
-		for (Map<String, Object> entry : history) {
-			Object analysisObj = entry.get("analysis");
-			if (analysisObj != null) {
-				analyses.add(analysisObj.toString());
-			}
-		}
-		System.out.println(analyses);
-		String OverallfeedbackPromt = generateOverAllFeedback(analyses);
-		System.out.println("OverallfeedbackPromt" + OverallfeedbackPromt);
+	    for (Map<String, Object> entry : history) {
+	        Object analysisObj = entry.get("analysis");
+	        if (analysisObj != null) {
+	            analyses.add(analysisObj.toString());
+	        }
 
-		JsonObject responseJson = parseAIResponse(callGemini(OverallfeedbackPromt));
-		String Overallfeedback = responseJson.get("OverallFeedback").getAsString();
-		int score = responseJson.get("Overallscore").getAsInt();
-		InterviewResponse response = new InterviewResponse(0, null, null, true, Overallfeedback, null, 0, 0, null,score);
-		return response;
+	        if (entry.containsKey("score")) {
+	            int score = ((Number) entry.get("score")).intValue();
+	            totalScore += score;
+	            scoreCount++;
+	        }
+	    }
 
+	    int averageScore = (int) Math.round(totalScore / scoreCount);
+	    
+	    System.out.println("Calculated average score (including last answer): " + averageScore);
+	    System.out.println("Analyses: " + analyses);
+
+	    // Generate feedback
+	    String overallFeedbackPrompt = generateOverAllFeedback(analyses);
+	    JsonObject responseJson = parseAIResponse(callGemini(overallFeedbackPrompt));
+	    String overallFeedback = responseJson.get("OverallFeedback").getAsString();
+
+	    return new InterviewResponse(
+	            0, null, null, true, 
+	            overallFeedback, null, 0, 0, null,
+	            averageScore);
 	}
 
 	private InterviewResponse buildInterviewResponse(String question, String skill, int questionNumber,
-			int skillQuestionNumber, String difficulty, int skillIndex, String feedback, boolean isComplete, int score) {
+			int skillQuestionNumber, String difficulty, int skillIndex, String feedback, boolean isComplete,
+			int score) {
 		InterviewResponse response = new InterviewResponse();
 		response.setQuestion(question);
 		response.setQuestionNumber(questionNumber);
@@ -170,8 +187,7 @@ public class InterviewService {
 
 		return "You're an expert technical interviewer evaluating a fresher's answer to a " + difficulty
 				+ " level question on the topic of " + skill + " for this skill.\n\n"
-				+ "Candidate's most recent answer: \"" + currentAnswer
-				+ " For the question :" + question + ")\n\n"
+				+ "Candidate's most recent answer: \"" + currentAnswer + " For the question :" + question + ")\n\n"
 				+ "Evaluate this response with empathy and technical insight give feedback.\n" + "Evaluation Rules:\n"
 				+ "DO NOT make comments like 'Let's move on' or 'Try another topic'. Focus only on this answer.\n\n"
 				+ "Evaluation Rules:\n"
@@ -186,8 +202,7 @@ public class InterviewService {
 				+ "Respond with ONLY raw JSON in this exact format:\n" + "{\n"
 				+ "  \"action\": \"next_question|simpler_question|next_skill|end\",\n"
 				+ "  \"feedback\": \"Give only two-line feedback strictly about the candidate's answer. DO NOT mention what action will be taken. Stricly suggest what the candidate can improve or learn.\"\n"
-				+ "  \"score\":  \"include score out of 10 according to the feedback\"\n"
-				+ "}\n";
+				+ "  \"score\":  \"include score out of 10 according to the feedback\"\n" + "}\n";
 	}
 
 	private String generateQuestion(String difficulty, String skill, List<Map<String, Object>> history) {
@@ -210,9 +225,8 @@ public class InterviewService {
 				+ "	\"Provide only the feedback text without any additional formatting or headings. \" +\r\n"
 				+ "	\"For example: 'Candidate shows strong Java skills but needs improvement in JavaScript. Overall, a solid foundation.'\";"
 				+ "Strictly return a JSON object in this format:\n" + "{\n"
-				+ " \"OverallFeedback\":\"<your generated Overallfeedback\""
-				+ " \"Overallscore\":\"Strictly include overall score out of 10  based on all feedbacks without any additional formatting or headings. \"";
-	}
+				+ " \"OverallFeedback\":\"<your generated Overallfeedback\"";
+		}
 
 	private JsonObject parseAIResponse(List<String> response) {
 		System.out.println("response :" + response);
@@ -258,7 +272,6 @@ public class InterviewService {
 			}
 
 			String text = parts.get(0).getAsJsonObject().get("text").getAsString();
-			System.out.println("text :" + text);
 
 			return Arrays.stream(text.split("\n")).map(String::trim).filter(line -> !line.isBlank())
 					.collect(Collectors.toList());
